@@ -4,18 +4,28 @@ import random
 import json
 import sys
 
-# INV LINK: http://localhost:8065/signup_user_complete/?id=
+URL = "http://localhost:8065/api/v4/"
 
 BOT_USERNAME = "ReviewBot"
 BOT_PASSWORD = "1234567890"
+BOT_TOKEN = ""                  # Можно оставить пустым, бот попробует запросить его сам
+
 CHANNEL_NAME = "reviews"
-URL = "http://localhost:8065/api/v4/"
+CHANNEL_ID = ""                 # Можно оставить пустым, бот выберет первый канал с CHANNEL_NAME
 
 PLUS_WORKER_REACTION = "heavy_plus_sign"
 COMMENT_WORKER_REACTION = "speech_balloon"
 DONE_TASK_REACTION = "white_check_mark"
 
-WORKERS_LIST = ["Yanka", "Yanochka", "Kotyatka", "Kotenka", "Solnce", "Kotenbka", "Yanya"]
+WORKERS_LIST = [
+    ["name_01", "name_02", "name_03"],  # Понедельник
+    ["name_04", "name_05", "name_06"],  # Вторник
+    ["name_07", "name_08", "name_09"],  # Среда
+    ["name_10", "name_11", "name_12"],  # Четверг
+    ["name_13", "name_14", "name_15"],  # Пятница
+]
+
+TASKS_PREFIXES = ["DSGN"]
 
 
 def login(login, password):
@@ -28,6 +38,8 @@ def login(login, password):
 
     bot_info = json.loads(resp.text)
     ret["token"] = resp.headers["Token"]
+    if BOT_TOKEN != "":
+        ret["token"] = BOT_TOKEN
     ret["id"] = bot_info["id"]
 
     return ret
@@ -46,10 +58,6 @@ def get_channel_id(name, token):
             return ch["id"]
 
     return
-
-
-def get_border_date():
-    return datetime.now() - timedelta(days=1)
 
 
 def get_workdays():
@@ -105,32 +113,24 @@ def get_task_messages(messages):
 
 
 def is_message_task(message):
-    """
-    формат сообщения-таски:
-        DSGN-1234 "Двигать пикселс" by Яночка
-    возращает bool, message -> dict("id", "description", "post_id", "assign_to")
-    """
+    for prefix in TASKS_PREFIXES:
+        if prefix in message:
+            return True
 
-    TASK_PREFIX = "DSGN-"
-    DESCRIPTION_PREFIX = ' "'
-    ASSIGN_TO_PREFIX = "by "
-
-    return not (TASK_PREFIX not in message or DESCRIPTION_PREFIX not in message or ASSIGN_TO_PREFIX not in message)
+    return False
 
 
-def get_workers_from_messages(messages, bot_id):
-    """
-    формат сообщения-объявления дежурного
-    Дежурные на сегодня: @Yana, @Yanochka, @Yanka
-    """
-    WORKERS_PREFIX = "Дежурные на сегодня: "
+def get_message_datetime(msg):
+    timestamp = msg["create_at"] // 1000
+    datetime.fromtimestamp(timestamp)
+    return None
 
-    for msg in messages:
-        if WORKERS_PREFIX in msg["message"] and msg["user_id"] == bot_id:
-            curr = msg["message"]
-            curr = curr.replace(WORKERS_PREFIX, "").replace("@", "").split(", ")
-            return curr
-    return
+
+def get_workers(day):
+    week_day = day.weekday()
+    if week_day < 5:
+        return WORKERS_LIST[week_day]
+    return None
 
 
 def get_workers_ids(workers, token):
@@ -245,9 +245,8 @@ def send_debt_messages(debt, all_messages, workers_info):
     return
 
 
-def send_workers_message():
+def send_workers_message(workers):
     text = "Дежурные на сегодня: "
-    workers = random.sample(WORKERS_LIST, 3)
     for w in workers:
         text += f"@{w}, "
     send_message(CHANNEL_NAME, text, bot['token'])
@@ -264,10 +263,12 @@ def send_message(channel, message, token):
 
 bot = login(BOT_USERNAME, BOT_PASSWORD)
 
-review_channel_id = get_channel_id(CHANNEL_NAME, bot["token"])
-if not review_channel_id:
-    print(f"Канал с именем {CHANNEL_NAME} не найден")
-    sys.exit()
+review_channel_id = CHANNEL_ID
+if CHANNEL_ID == "":
+    review_channel_id = get_channel_id(CHANNEL_NAME, bot["token"])
+    if not review_channel_id:
+        print(f"Канал с именем {CHANNEL_NAME} не найден")
+        sys.exit()
 
 workdays = get_workdays()
 all_messages = get_all_messages_since(workdays[2][0], review_channel_id, bot["token"])
@@ -280,36 +281,34 @@ debt_tasks = dict()
 
 workers_info = dict()
 
-for curr_messages in filtered:
-    curr_tasks = get_task_messages(curr_messages)
+for curr_day_messages in filtered:
+    curr_day_tasks = get_task_messages(curr_day_messages)
 
-    curr_workers = get_workers_from_messages(curr_messages, bot["id"])
-    if curr_workers is None or len(curr_workers) == 0 and len(curr_tasks[0]) != 0:
-        continue
+    curr_day_workers = get_workers(curr_day_messages[0])
+    curr_day_workers = set(curr_day_workers)
 
-    curr_workers = set(curr_workers)
-    curr_workers_with_id = get_workers_ids(curr_workers, bot["token"])
-    for w in curr_workers_with_id:
-        workers_info[curr_workers_with_id[w]] = w
+    curr_day_workers_with_id = get_workers_ids(curr_day_workers, bot["token"])
+    for w in curr_day_workers_with_id:
+        workers_info[curr_day_workers_with_id[w]] = w
 
     messages_with_reactions = dict()
-    for t in curr_tasks:
+    for t in curr_day_tasks:
         messages_with_reactions[t["id"]] = get_tasks_reactions(t, bot["token"])
 
-    curr_done_tasks = get_three_plus_tasks(messages_with_reactions, curr_workers_with_id.values())
-    curr_comm_tasks = get_commented_tasks(messages_with_reactions, curr_workers_with_id.values())
-    curr_debt_tasks = get_workers_debt(messages_with_reactions, curr_workers_with_id.values())
+    curr_day_done_tasks = get_three_plus_tasks(messages_with_reactions, curr_day_workers_with_id.values())
+    curr_day_comm_tasks = get_commented_tasks(messages_with_reactions, curr_day_workers_with_id.values())
+    curr_day_debt_tasks = get_workers_debt(messages_with_reactions, curr_day_workers_with_id.values())
 
-    for i in curr_done_tasks:
+    for i in curr_day_done_tasks:
         done_tasks.append(i)
 
-    for i in curr_comm_tasks:
+    for i in curr_day_comm_tasks:
         comm_tasks.append(i)
 
-    for i in curr_debt_tasks:
+    for i in curr_day_debt_tasks:
         if i not in debt_tasks:
             debt_tasks[i] = list()
-        for j in curr_debt_tasks[i]:
+        for j in curr_day_debt_tasks[i]:
             debt_tasks[i].append(j)
 
 send_messages_in_intersect(done_tasks, all_messages, "Можно закрывать: ")
