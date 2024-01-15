@@ -106,15 +106,23 @@ def get_task_messages(messages):
     ret = list()
 
     for i in messages:
-        if is_message_task(i["message"]):
+        if is_message_task(i):
             ret.append(i)
 
     return ret
 
 
 def is_message_task(message):
+    DESCRIPTION_PREFIX = ' "'
+    ASSIGN_TO_PREFIX = "by "
+
+    author_id = message["user_id"]
+    if author_id == bot["id"]:
+        return False
+
+    msg_text = message["message"]
     for prefix in TASKS_PREFIXES:
-        if prefix in message:
+        if prefix in msg_text and DESCRIPTION_PREFIX in msg_text and ASSIGN_TO_PREFIX:
             return True
 
     return False
