@@ -242,7 +242,7 @@ def send_messages_in_intersect(channel_id, tasks, all_messages, text):
     match = False
     for msg in all_messages:
         if msg["id"] in tasks:
-            text += msg["message"] + "\n"
+            text += f'\n - {msg["message"]}'
             match = True
 
     text = text.replace("by ", "by @")
@@ -264,8 +264,9 @@ def send_debt_messages(channel_id, debt, all_messages, workers_info):
         for task in debt[worker]:
             for msg in all_messages:
                 if msg["id"] == task:
-                    text += f" - {msg['message']} \n"
+                    text += f"\n - {msg['message']}"
 
+        text += "\n"
     text = text.replace("by ", "by @")
     if match:
         send_message(channel_id, text, bot["token"])
