@@ -213,7 +213,7 @@ def get_workers_debt(messages_with_reactions, curr_workers):
     return ret
 
 
-def send_messages_in_intersect(tasks, all_messages, text):
+def send_messages_in_intersect(channel_id, tasks, all_messages, text):
     if len(tasks) == 0:
         return
 
@@ -225,11 +225,11 @@ def send_messages_in_intersect(tasks, all_messages, text):
 
     text = text.replace("by ", "by @")
     if match:
-        send_message(CHANNEL_NAME, text, bot["id"])
+        send_message(channel_id, text, bot["id"])
     return
 
 
-def send_debt_messages(debt, all_messages, workers_info):
+def send_debt_messages(channel_id, debt, all_messages, workers_info):
     text = "Долги дежурных: \n"
     match = False
     for worker in debt:
@@ -244,15 +244,15 @@ def send_debt_messages(debt, all_messages, workers_info):
         text += "\n\n"
     text = text.replace("by ", "by @")
     if match:
-        send_message(CHANNEL_NAME, text, bot["token"])
+        send_message(channel_id, text, bot["token"])
     return
 
 
-def send_workers_message(workers):
+def send_workers_message(channel_id, workers):
     text = "Дежурные на сегодня: "
     for w in workers:
         text += f"@{w}, "
-    send_message(CHANNEL_NAME, text, bot['token'])
+    send_message(channel_id, text, bot['token'])
 
 
 def send_message(channel, message, token):
@@ -317,7 +317,7 @@ for curr_day_messages in filtered:
         for j in curr_day_debt_tasks[i]:
             debt_tasks[i].append(j)
 
-send_messages_in_intersect(done_tasks, all_messages, "Можно закрывать: ")
-send_messages_in_intersect(comm_tasks, all_messages, "Проверить комментарии: ")
-send_debt_messages(debt_tasks, all_messages, workers_info)
-send_workers_message(get_workers(datetime.now()))
+send_messages_in_intersect(review_channel_id, done_tasks, all_messages, "Можно закрывать: ")
+send_messages_in_intersect(review_channel_id, comm_tasks, all_messages, "Проверить комментарии: ")
+send_debt_messages(review_channel_id, debt_tasks, all_messages, workers_info)
+send_workers_message(review_channel_id, get_workers(datetime.now()))
