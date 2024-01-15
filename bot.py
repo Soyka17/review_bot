@@ -214,6 +214,9 @@ def get_workers_debt(messages_with_reactions, curr_workers):
 
 
 def send_messages_in_intersect(tasks, all_messages, text):
+    if len(tasks) == 0:
+        return
+
     match = False
     for msg in all_messages:
         if msg["id"] in tasks:
@@ -282,6 +285,9 @@ debt_tasks = dict()
 workers_info = dict()
 
 for curr_day_messages in filtered:
+    if len(curr_day_messages) == 0:
+        continue
+
     curr_day_tasks = get_task_messages(curr_day_messages)
 
     curr_day_workers = get_workers(get_message_datetime(curr_day_messages[0]))
@@ -314,4 +320,4 @@ for curr_day_messages in filtered:
 send_messages_in_intersect(done_tasks, all_messages, "Можно закрывать: ")
 send_messages_in_intersect(comm_tasks, all_messages, "Проверить комментарии: ")
 send_debt_messages(debt_tasks, all_messages, workers_info)
-send_workers_message()
+send_workers_message(get_workers(datetime.now()))
