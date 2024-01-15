@@ -26,7 +26,7 @@ WORKERS_LIST = [
 
 TASKS_PREFIXES = ["DSGN"]
 
-TEST_BUIILD = True
+TEST_BUIILD = False
 
 def login(login, password):
     ret = dict()
