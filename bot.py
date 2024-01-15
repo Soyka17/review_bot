@@ -63,9 +63,9 @@ def get_channel_id(name, token):
 def get_workdays():
     if TEST_BUIILD:
         return [
-            [1705338000000, 1705341600000],
-            [1705341600000, 1705345200000],
-            [1705345200000, 1705348800000],
+            [1705345200, 1705348800],
+            [1705341600, 1705345200],
+            [1705338000, 1705341600]
         ]
 
     ret = list()
@@ -146,7 +146,7 @@ def get_workers(day):
     if TEST_BUIILD:
         workdays = get_workdays()
         for i in range(len(workdays)):
-            if workdays[i][0] <= day.timestamp() * 1000 <= workdays[i][0]:
+            if workdays[i][0] <= day.timestamp() <= workdays[i][1]:
                 return WORKERS_LIST[i]
 
     week_day = day.weekday()
@@ -247,7 +247,7 @@ def send_messages_in_intersect(channel_id, tasks, all_messages, text):
 
     text = text.replace("by ", "by @")
     if match:
-        send_message(channel_id, text, bot["id"])
+        send_message(channel_id, text, bot["token"])
     return
 
 
@@ -257,13 +257,15 @@ def send_debt_messages(channel_id, debt, all_messages, workers_info):
     for worker in debt:
         if len(debt[worker]) == 0:
             continue
+
         match = True
         text += f"@{workers_info[worker]}:"
+
         for task in debt[worker]:
             for msg in all_messages:
                 if msg["id"] == task:
-                    text += f"{msg['message']}, "
-        text += "\n\n"
+                    text += f" - {msg['message']} \n"
+
     text = text.replace("by ", "by @")
     if match:
         send_message(channel_id, text, bot["token"])
