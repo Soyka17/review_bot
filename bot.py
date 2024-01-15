@@ -1,6 +1,5 @@
 from datetime import datetime, timedelta
 import requests
-import random
 import json
 import sys
 
@@ -27,6 +26,7 @@ WORKERS_LIST = [
 
 TASKS_PREFIXES = ["DSGN"]
 
+TEST_BUIILD = True
 
 def login(login, password):
     ret = dict()
@@ -61,8 +61,16 @@ def get_channel_id(name, token):
 
 
 def get_workdays():
+    if TEST_BUIILD:
+        return [
+            [1705338000000, 1705341600000],
+            [1705341600000, 1705345200000],
+            [1705345200000, 1705348800000],
+        ]
+
     ret = list()
     curr_day = datetime.now()
+
     while len(ret) < 3:
         curr_day = curr_day - timedelta(days=1)
         if curr_day.weekday() < 5:
@@ -135,6 +143,12 @@ def get_message_datetime(msg):
 
 
 def get_workers(day):
+    if TEST_BUIILD:
+        workdays = get_workdays()
+        for i in range(len(workdays)):
+            if workdays[i][0] <= day.timestamp() * 1000 <= workdays[i][0]:
+                return WORKERS_LIST[i]
+
     week_day = day.weekday()
     if week_day < 5:
         return WORKERS_LIST[week_day]
