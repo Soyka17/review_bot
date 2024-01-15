@@ -122,8 +122,8 @@ def is_message_task(message):
 
 def get_message_datetime(msg):
     timestamp = msg["create_at"] // 1000
-    datetime.fromtimestamp(timestamp)
-    return None
+    day = datetime.fromtimestamp(timestamp)
+    return day
 
 
 def get_workers(day):
@@ -284,7 +284,7 @@ workers_info = dict()
 for curr_day_messages in filtered:
     curr_day_tasks = get_task_messages(curr_day_messages)
 
-    curr_day_workers = get_workers(curr_day_messages[0])
+    curr_day_workers = get_workers(get_message_datetime(curr_day_messages[0]))
     curr_day_workers = set(curr_day_workers)
 
     curr_day_workers_with_id = get_workers_ids(curr_day_workers, bot["token"])
