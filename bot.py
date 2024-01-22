@@ -222,7 +222,9 @@ def get_commented_tasks(messages_with_reactions, curr_workers):
         for worker in curr_workers:
             if worker in curr_msg[COMMENT_WORKER_REACTION]:
                 ret.append(msg_id)
-    del messages_with_reactions[ret[0]]
+
+    for i in range(len(ret)):
+        del messages_with_reactions[ret[i]]
     return ret
 
 
@@ -231,13 +233,11 @@ def remove_back_tasks_in_dict_reactions(messages_with_reactions):
 
     for msg_id in messages_with_reactions:
         curr_msg = messages_with_reactions[msg_id]
-        if BACK_TASK_REACTION not in curr_msg:
-            continue
-        else:
+        if BACK_TASK_REACTION in curr_msg:
             ret.append(msg_id)
 
-    if len(ret) != 0:
-        del messages_with_reactions[ret[0]]
+    for i in range(len(ret)):
+        del messages_with_reactions[ret[i]]
     return
 
 
@@ -246,13 +246,11 @@ def remove_done_tasks_in_dict_reactions(messages_with_reactions):
 
     for msg_id in messages_with_reactions:
         curr_msg = messages_with_reactions[msg_id]
-        if DONE_TASK_REACTION not in curr_msg:
-            continue
-        else:
+        if DONE_TASK_REACTION in curr_msg:
             ret.append(msg_id)
 
-    if len(ret) != 0:
-        del messages_with_reactions[ret[0]]
+    for i in range(len(ret)):
+        del messages_with_reactions[ret[i]]
     return
 
 
