@@ -249,7 +249,7 @@ def get_list_user_channel(channel_id, token):
     return list_user
 
 
-def get_user_info(users_id, token):
+def get_users_info(users_id, token):
     users_info = []
     for user in users_id:
         req_user_name = requests.get(URL + 'users/' + user, headers=auth(token))
@@ -259,14 +259,16 @@ def get_user_info(users_id, token):
 
 
 def get_creator_task(mess, users_info):
-  regex = re.findall(r'by \[(\D+)\]', mess)
-  if len(regex) == 0:
-      return None
-  username = regex[0].split()
-  for user in users_info:
-    if username[0] in user['last_name'] and username[1] in user['first_name']:
-      ret = user['username']
-  return ret
+    ret = ""
+    regex = re.findall(r'by \[(\D+)\]', mess)
+    username = regex[0].split()
+    for user in users_info:
+        if (username[0] == user['last_name'] and username[1] == user['first_name']) or (
+                username[1] == user['last_name'] and username[0] == user['first_name']):
+            ret = user['username']
+    if ret == "":
+        return regex[0]
+    return ret
 
 
 def send_messages_in_intersect(channel_id, tasks, all_messages, text):
@@ -376,7 +378,7 @@ for curr_day_messages in filtered:
             debt_tasks[i].append(j)
 
 list_users_id = get_list_user_channel(review_channel_id, bot["token"])
-arr_user_info = get_user_info(list_users_id, bot["token"])
+arr_user_info = get_users_info(list_users_id, bot["token"])
 send_messages_in_intersect(review_channel_id, done_tasks, all_messages, DONE_TEXT)
 send_messages_in_intersect(review_channel_id, comm_tasks, all_messages, COMMENT_TEXT)
 send_debt_messages(review_channel_id, debt_tasks, all_messages, workers_info)
