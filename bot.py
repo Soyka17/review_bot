@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 import requests
+import re
 import json
 import sys
 
@@ -25,6 +26,10 @@ WORKERS_LIST = [
 ]
 
 TASKS_PREFIXES = ["DSGN"]
+
+DEBT_TEXT = "проверьте задачу и поставьте соответствующую реакцию под сообщением"
+COMMENT_TEXT = "проверьте комментарии к задаче"
+DONE_TEXT = "поставьте реакцию \"done\" и закройте задачу по готовности"
 
 TEST_BUIILD = False
 
@@ -121,7 +126,7 @@ def get_task_messages(messages):
 
 
 def is_message_task(message):
-    DESCRIPTION_PREFIX = ' "'
+    DESCRIPTION_PREFIX = ''
     ASSIGN_TO_PREFIX = "by "
 
     author_id = message["user_id"]
@@ -229,9 +234,40 @@ def get_workers_debt(messages_with_reactions, curr_workers):
         curr_msg = messages_with_reactions[msg_id]
         count = 0
         for w in curr_workers:
-            if len(curr_msg) == 0 or len(curr_msg[PLUS_WORKER_REACTION]) == 0 or w not in curr_msg[PLUS_WORKER_REACTION]:
+            if PLUS_WORKER_REACTION not in curr_msg or len(curr_msg) == 0 or len(curr_msg[PLUS_WORKER_REACTION]) == 0 or w not in curr_msg[PLUS_WORKER_REACTION]:
                 ret[w].append(msg_id)
 
+    return ret
+
+
+def get_list_user_channel(channel_id, token):
+    list_user = []
+    req_users = requests.get(URL + 'channels/' + channel_id + '/members', headers=auth(token))
+    users = json.loads(req_users.text)
+    for i in users:
+        list_user.append(i['user_id'])
+    return list_user
+
+
+def get_users_info(users_id, token):
+    users_info = []
+    for user in users_id:
+        req_user_name = requests.get(URL + 'users/' + user, headers=auth(token))
+        user_name = json.loads(req_user_name.text)
+        users_info.append(user_name)
+    return users_info
+
+
+def get_creator_task(mess, users_info):
+    ret = ""
+    regex = re.findall(r'by \[(\D+)\]', mess)
+    username = regex[0].split()
+    for user in users_info:
+        if (username[0] == user['last_name'] and username[1] == user['first_name']) or (
+                username[1] == user['last_name'] and username[0] == user['first_name']):
+            ret = user['username']
+    if ret == "":
+        return regex[0]
     return ret
 
 
@@ -239,37 +275,26 @@ def send_messages_in_intersect(channel_id, tasks, all_messages, text):
     if len(tasks) == 0:
         return
 
-    match = False
     for msg in all_messages:
         if msg["id"] in tasks:
-            text += f'\n - {msg["message"]}'
-            match = True
-
-    text = text.replace("by ", "by @")
-    if match:
-        send_message(channel_id, text, bot["token"])
+            creator_task = get_creator_task(msg["message"], arr_user_info)
+            text = f'@{creator_task} {text}'
+            root_id = msg['id']
+            send_thread_message(channel_id, text, root_id, bot["token"])
     return
 
 
 def send_debt_messages(channel_id, debt, all_messages, workers_info):
-    text = "Долги дежурных: \n"
-    match = False
     for worker in debt:
         if len(debt[worker]) == 0:
             continue
 
-        match = True
-        text += f"@{workers_info[worker]}:"
-
         for task in debt[worker]:
             for msg in all_messages:
                 if msg["id"] == task:
-                    text += f"\n - {msg['message']}"
-
-        text += "\n"
-    text = text.replace("by ", "by @")
-    if match:
-        send_message(channel_id, text, bot["token"])
+                    text = f"@{workers_info[worker]} {DEBT_TEXT}"
+                    root_id = msg['id']
+                    send_thread_message(channel_id, text, root_id, bot["token"])
     return
 
 
@@ -284,6 +309,16 @@ def send_message(channel, message, token):
     payload = {
         "channel_id": channel,
         "message": message
+    }
+
+    resp = requests.post(URL + "posts", json=payload, headers=auth(token))
+
+
+def send_thread_message(channel, message, root_id, token):
+    payload = {
+        "channel_id": channel,
+        "message": message,
+        "root_id": root_id
     }
 
     resp = requests.post(URL + "posts", json=payload, headers=auth(token))
@@ -342,7 +377,9 @@ for curr_day_messages in filtered:
         for j in curr_day_debt_tasks[i]:
             debt_tasks[i].append(j)
 
-send_messages_in_intersect(review_channel_id, done_tasks, all_messages, "Можно закрывать: ")
-send_messages_in_intersect(review_channel_id, comm_tasks, all_messages, "Проверить комментарии: ")
+list_users_id = get_list_user_channel(review_channel_id, bot["token"])
+arr_user_info = get_users_info(list_users_id, bot["token"])
+send_messages_in_intersect(review_channel_id, done_tasks, all_messages, DONE_TEXT)
+send_messages_in_intersect(review_channel_id, comm_tasks, all_messages, COMMENT_TEXT)
 send_debt_messages(review_channel_id, debt_tasks, all_messages, workers_info)
 send_workers_message(review_channel_id, get_workers(datetime.now()))
