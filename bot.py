@@ -307,9 +307,9 @@ def send_messages_in_intersect(channel_id, tasks, all_messages, text):
     for msg in all_messages:
         if msg["id"] in tasks:
             creator_task = get_creator_task(msg["message"], arr_user_info)
-            text = f'@{creator_task} {text}'
+            text_data = f'@{creator_task} {text}'
             root_id = msg['id']
-            send_thread_message(channel_id, text, root_id, bot["token"])
+            send_thread_message(channel_id, text_data, root_id, bot["token"])
     return
 
 
