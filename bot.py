@@ -230,7 +230,7 @@ def get_workers_debt(messages_with_reactions, curr_workers):
         curr_msg = messages_with_reactions[msg_id]
         count = 0
         for w in curr_workers:
-            if len(curr_msg) == 0 or len(curr_msg[PLUS_WORKER_REACTION]) == 0 or w not in curr_msg[PLUS_WORKER_REACTION]:
+            if PLUS_WORKER_REACTION not in curr_msg or len(curr_msg) == 0 or len(curr_msg[PLUS_WORKER_REACTION]) == 0 or w not in curr_msg[PLUS_WORKER_REACTION]:
                 ret[w].append(msg_id)
 
     return ret
@@ -255,7 +255,7 @@ def get_user_info(users_id, token):
 
 
 def get_creator_task(mess, users_info):
-  regex = re.findall(r'by @\[(\D+)\]', mess)
+  regex = re.findall(r'by \[(\D+)\]', mess)
   username = regex[0].split()
   for user in users_info:
     if username[0] in user['last_name'] and username[1] in user['first_name']:
