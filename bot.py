@@ -16,6 +16,7 @@ CHANNEL_ID = ""                 # Можно оставить пустым, бо
 PLUS_WORKER_REACTION = "heavy_plus_sign"
 COMMENT_WORKER_REACTION = "speech_balloon"
 DONE_TASK_REACTION = "white_check_mark"
+BACK_TASK_REACTION = "back"
 
 WORKERS_LIST = [
     ["name_01", "name_02", "name_03"],  # Понедельник
@@ -221,8 +222,38 @@ def get_commented_tasks(messages_with_reactions, curr_workers):
         for worker in curr_workers:
             if worker in curr_msg[COMMENT_WORKER_REACTION]:
                 ret.append(msg_id)
-
+    del messages_with_reactions[ret[0]]
     return ret
+
+
+def remove_back_tasks_in_dict_reactions(messages_with_reactions):
+    ret = list()
+
+    for msg_id in messages_with_reactions:
+        curr_msg = messages_with_reactions[msg_id]
+        if BACK_TASK_REACTION not in curr_msg:
+            continue
+        else:
+            ret.append(msg_id)
+
+    if len(ret) != 0:
+        del messages_with_reactions[ret[0]]
+    return
+
+
+def remove_done_tasks_in_dict_reactions(messages_with_reactions):
+    ret = list()
+
+    for msg_id in messages_with_reactions:
+        curr_msg = messages_with_reactions[msg_id]
+        if DONE_TASK_REACTION not in curr_msg:
+            continue
+        else:
+            ret.append(msg_id)
+
+    if len(ret) != 0:
+        del messages_with_reactions[ret[0]]
+    return
 
 
 def get_workers_debt(messages_with_reactions, curr_workers):
@@ -361,6 +392,8 @@ for curr_day_messages in filtered:
     for t in curr_day_tasks:
         messages_with_reactions[t["id"]] = get_tasks_reactions(t, bot["token"])
 
+    skip_notification_back_tasks = remove_back_tasks_in_dict_reactions(messages_with_reactions)
+    skip_notification_done_tasks = remove_done_tasks_in_dict_reactions(messages_with_reactions)
     curr_day_done_tasks = get_three_plus_tasks(messages_with_reactions, curr_day_workers_with_id.values())
     curr_day_comm_tasks = get_commented_tasks(messages_with_reactions, curr_day_workers_with_id.values())
     curr_day_debt_tasks = get_workers_debt(messages_with_reactions, curr_day_workers_with_id.values())
