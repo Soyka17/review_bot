@@ -27,6 +27,10 @@ WORKERS_LIST = [
 
 TASKS_PREFIXES = ["DSGN"]
 
+DEBT_TEXT = "проверьте задачу и поставьте соответствующую реакцию под сообщением"
+COMMENT_TEXT = "проверьте комментарии к задаче"
+DONE_TEXT = "поставьте реакцию \"done\" и закройте задачу по готовности"
+
 TEST_BUIILD = False
 
 def login(login, password):
@@ -122,7 +126,7 @@ def get_task_messages(messages):
 
 
 def is_message_task(message):
-    DESCRIPTION_PREFIX = ' "'
+    DESCRIPTION_PREFIX = ''
     ASSIGN_TO_PREFIX = "by "
 
     author_id = message["user_id"]
@@ -256,6 +260,8 @@ def get_user_info(users_id, token):
 
 def get_creator_task(mess, users_info):
   regex = re.findall(r'by \[(\D+)\]', mess)
+  if len(regex) == 0:
+      return None
   username = regex[0].split()
   for user in users_info:
     if username[0] in user['last_name'] and username[1] in user['first_name']:
@@ -284,7 +290,7 @@ def send_debt_messages(channel_id, debt, all_messages, workers_info):
         for task in debt[worker]:
             for msg in all_messages:
                 if msg["id"] == task:
-                    text = f"@{workers_info[worker]} проверьте задачу и поставьте соответствующую реакцию под сообщением"
+                    text = f"@{workers_info[worker]} {DEBT_TEXT}"
                     root_id = msg['id']
                     send_thread_message(channel_id, text, root_id, bot["token"])
     return
@@ -371,7 +377,7 @@ for curr_day_messages in filtered:
 
 list_users_id = get_list_user_channel(review_channel_id, bot["token"])
 arr_user_info = get_user_info(list_users_id, bot["token"])
-send_messages_in_intersect(review_channel_id, done_tasks, all_messages, "поставьте реакцию \"done\" и закройте задачу по готовности")
-send_messages_in_intersect(review_channel_id, comm_tasks, all_messages, "проверьте комментарии к задаче")
+send_messages_in_intersect(review_channel_id, done_tasks, all_messages, DONE_TEXT)
+send_messages_in_intersect(review_channel_id, comm_tasks, all_messages, COMMENT_TEXT)
 send_debt_messages(review_channel_id, debt_tasks, all_messages, workers_info)
 send_workers_message(review_channel_id, get_workers(datetime.now()))
