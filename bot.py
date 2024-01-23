@@ -8,10 +8,10 @@ URL = "http://localhost:8065/api/v4/"
 
 BOT_USERNAME = "ReviewBot"
 BOT_PASSWORD = "1234567890"
-BOT_TOKEN = ""                  # Можно оставить пустым, бот попробует запросить его сам
+BOT_TOKEN = ""  # Можно оставить пустым, бот попробует запросить его сам
 
 CHANNEL_NAME = "reviews"
-CHANNEL_ID = ""                 # Можно оставить пустым, бот выберет первый канал с CHANNEL_NAME
+CHANNEL_ID = ""  # Можно оставить пустым, бот выберет первый канал с CHANNEL_NAME
 
 PLUS_WORKER_REACTION = "heavy_plus_sign"
 COMMENT_WORKER_REACTION = "speech_balloon"
@@ -34,20 +34,20 @@ DONE_TEXT = "поставьте реакцию \"done\" и закройте за
 
 TEST_BUIILD = False
 
+
 def login(login, password):
     ret = dict()
+    if BOT_TOKEN != "":
+        ret["token"] = BOT_TOKEN
+        return ret
+
     resp = requests.post(URL + 'users/login',
                          data='{"login_id":"' + login + '","password":"' + password + '"}')
     if resp.status_code != 200:
         print("Ошибка авторизации: проверьте логин и пароль бота")
         sys.exit()
 
-    bot_info = json.loads(resp.text)
     ret["token"] = resp.headers["Token"]
-    if BOT_TOKEN != "":
-        ret["token"] = BOT_TOKEN
-    ret["id"] = bot_info["id"]
-
     return ret
 
 
@@ -129,10 +129,6 @@ def get_task_messages(messages):
 def is_message_task(message):
     DESCRIPTION_PREFIX = ''
     ASSIGN_TO_PREFIX = "by "
-
-    author_id = message["user_id"]
-    if author_id == bot["id"]:
-        return False
 
     msg_text = message["message"]
     for prefix in TASKS_PREFIXES:
@@ -254,16 +250,25 @@ def remove_done_tasks_in_dict_reactions(messages_with_reactions):
     return
 
 
+def is_worker_reacted(reacts, worker):
+    if len(reacts) == 0:
+        return False
+    if worker in reacts[PLUS_WORKER_REACTION]:
+        return True
+    if worker in reacts[COMMENT_WORKER_REACTION]:
+        return True
+    return False
+
+
 def get_workers_debt(messages_with_reactions, curr_workers):
     ret = dict()
     for w in curr_workers:
         ret[w] = list()
 
     for msg_id in messages_with_reactions:
-        curr_msg = messages_with_reactions[msg_id]
-        count = 0
+        curr_msg_reacts = messages_with_reactions[msg_id]
         for w in curr_workers:
-            if PLUS_WORKER_REACTION not in curr_msg or len(curr_msg) == 0 or len(curr_msg[PLUS_WORKER_REACTION]) == 0 or w not in curr_msg[PLUS_WORKER_REACTION]:
+            if not is_worker_reacted(curr_msg_reacts, w):
                 ret[w].append(msg_id)
 
     return ret
@@ -390,8 +395,9 @@ for curr_day_messages in filtered:
     for t in curr_day_tasks:
         messages_with_reactions[t["id"]] = get_tasks_reactions(t, bot["token"])
 
-    skip_notification_back_tasks = remove_back_tasks_in_dict_reactions(messages_with_reactions)
-    skip_notification_done_tasks = remove_done_tasks_in_dict_reactions(messages_with_reactions)
+    remove_back_tasks_in_dict_reactions(messages_with_reactions)
+    remove_done_tasks_in_dict_reactions(messages_with_reactions)
+
     curr_day_done_tasks = get_three_plus_tasks(messages_with_reactions, curr_day_workers_with_id.values())
     curr_day_comm_tasks = get_commented_tasks(messages_with_reactions, curr_day_workers_with_id.values())
     curr_day_debt_tasks = get_workers_debt(messages_with_reactions, curr_day_workers_with_id.values())
