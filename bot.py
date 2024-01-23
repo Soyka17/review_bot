@@ -219,8 +219,6 @@ def get_commented_tasks(messages_with_reactions, curr_workers):
             if worker in curr_msg[COMMENT_WORKER_REACTION]:
                 ret.append(msg_id)
 
-    for i in range(len(ret)):
-        del messages_with_reactions[ret[i]]
     return ret
 
 
@@ -253,9 +251,9 @@ def remove_done_tasks_in_dict_reactions(messages_with_reactions):
 def is_worker_reacted(reacts, worker):
     if len(reacts) == 0:
         return False
-    if worker in reacts[PLUS_WORKER_REACTION]:
+    if PLUS_WORKER_REACTION in reacts and worker in reacts[PLUS_WORKER_REACTION]:
         return True
-    if worker in reacts[COMMENT_WORKER_REACTION]:
+    if COMMENT_WORKER_REACTION in reacts and worker in reacts[COMMENT_WORKER_REACTION]:
         return True
     return False
 
