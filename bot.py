@@ -16,6 +16,7 @@ CHANNEL_ID = ""                 # Можно оставить пустым, бо
 PLUS_WORKER_REACTION = "heavy_plus_sign"
 COMMENT_WORKER_REACTION = "speech_balloon"
 DONE_TASK_REACTION = "white_check_mark"
+BACK_TASK_REACTION = "back"
 
 WORKERS_LIST = [
     ["name_01", "name_02", "name_03"],  # Понедельник
@@ -222,7 +223,35 @@ def get_commented_tasks(messages_with_reactions, curr_workers):
             if worker in curr_msg[COMMENT_WORKER_REACTION]:
                 ret.append(msg_id)
 
+    for i in range(len(ret)):
+        del messages_with_reactions[ret[i]]
     return ret
+
+
+def remove_back_tasks_in_dict_reactions(messages_with_reactions):
+    ret = list()
+
+    for msg_id in messages_with_reactions:
+        curr_msg = messages_with_reactions[msg_id]
+        if BACK_TASK_REACTION in curr_msg:
+            ret.append(msg_id)
+
+    for i in range(len(ret)):
+        del messages_with_reactions[ret[i]]
+    return
+
+
+def remove_done_tasks_in_dict_reactions(messages_with_reactions):
+    ret = list()
+
+    for msg_id in messages_with_reactions:
+        curr_msg = messages_with_reactions[msg_id]
+        if DONE_TASK_REACTION in curr_msg:
+            ret.append(msg_id)
+
+    for i in range(len(ret)):
+        del messages_with_reactions[ret[i]]
+    return
 
 
 def get_workers_debt(messages_with_reactions, curr_workers):
@@ -278,9 +307,9 @@ def send_messages_in_intersect(channel_id, tasks, all_messages, text):
     for msg in all_messages:
         if msg["id"] in tasks:
             creator_task = get_creator_task(msg["message"], arr_user_info)
-            text = f'@{creator_task} {text}'
+            text_data = f'@{creator_task} {text}'
             root_id = msg['id']
-            send_thread_message(channel_id, text, root_id, bot["token"])
+            send_thread_message(channel_id, text_data, root_id, bot["token"])
     return
 
 
@@ -361,6 +390,8 @@ for curr_day_messages in filtered:
     for t in curr_day_tasks:
         messages_with_reactions[t["id"]] = get_tasks_reactions(t, bot["token"])
 
+    skip_notification_back_tasks = remove_back_tasks_in_dict_reactions(messages_with_reactions)
+    skip_notification_done_tasks = remove_done_tasks_in_dict_reactions(messages_with_reactions)
     curr_day_done_tasks = get_three_plus_tasks(messages_with_reactions, curr_day_workers_with_id.values())
     curr_day_comm_tasks = get_commented_tasks(messages_with_reactions, curr_day_workers_with_id.values())
     curr_day_debt_tasks = get_workers_debt(messages_with_reactions, curr_day_workers_with_id.values())
